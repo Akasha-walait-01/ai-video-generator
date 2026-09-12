@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Script-to-Video Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --bg: #0b0d12;
+        --surface: #14171f;
+        --surface-2: #1b1f2a;
+        --border: #262b38;
+        --text: #e8eaf0;
+        --text-muted: #8b91a3;
+        --accent: #5eb3f5;
+        --accent-hover: #7cc2f7;
+        --accent-soft: rgba(94, 179, 245, 0.12);
+        --success: #4ade80;
+        --success-bg: rgba(74, 222, 128, 0.1);
+        --error: #f87171;
+        --error-bg: rgba(248, 113, 113, 0.1);
+        --radius: 12px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+        font-family: 'Inter', -apple-system, sans-serif;
+        max-width: 780px;
+        margin: 0 auto;
+        padding: 48px 24px 80px;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.5;
+    }
+
+    header { text-align: center; margin-bottom: 40px; }
+
+    header .badge {
+        display: inline-block;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--accent);
+        background: var(--accent-soft);
+        padding: 5px 12px;
+        border-radius: 999px;
+        margin-bottom: 14px;
+    }
+
+    h1 { font-size: 30px; font-weight: 800; margin: 0 0 8px; letter-spacing: -0.02em; }
+    header p { color: var(--text-muted); font-size: 15px; margin: 0; }
+
+    .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 28px;
+        margin-bottom: 20px;
+    }
+
+    .card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; }
+
+    .step-number {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        background: var(--accent-soft);
+        color: var(--accent);
+        font-size: 13px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .card-header h2 { font-size: 16px; font-weight: 700; margin: 0; }
+
+    .card-header .optional-tag {
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--text-muted);
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        padding: 2px 9px;
+        border-radius: 999px;
+        margin-left: auto;
+    }
+
+    .hint { color: var(--text-muted); font-size: 13px; margin: -8px 0 16px; }
+
+    label { display: block; font-weight: 600; font-size: 13px; margin-bottom: 6px; color: var(--text); }
+
+    .field { margin-bottom: 18px; }
+    .field:last-child { margin-bottom: 0; }
+
+    textarea, select, input[type="text"] {
+        width: 100%;
+        padding: 12px 14px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: var(--surface-2);
+        color: var(--text);
+        font-family: inherit;
+        font-size: 14px;
+        transition: border-color 0.15s ease;
+    }
+
+    textarea { height: 150px; resize: vertical; }
+
+    textarea:focus, select:focus, input[type="text"]:focus, input[type="file"]:focus {
+        outline: none;
+        border-color: var(--accent);
+    }
+
+    select { cursor: pointer; }
+
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; cursor: pointer; margin-bottom: 0; }
+
+    .toggle-row input[type="checkbox"] {
+        width: 40px;
+        height: 22px;
+        appearance: none;
+        background: var(--surface-2);
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        position: relative;
+        cursor: pointer;
+        transition: background 0.15s ease;
+    }
+
+    .toggle-row input[type="checkbox"]:checked { background: var(--accent); border-color: var(--accent); }
+
+    .toggle-row input[type="checkbox"]::before {
+        content: '';
+        position: absolute;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--text);
+        top: 2px;
+        left: 2px;
+        transition: left 0.15s ease;
+    }
+
+    .toggle-row input[type="checkbox"]:checked::before { left: 20px; background: #06121c; }
+
+    .file-drop {
+        position: relative;
+        border: 1.5px dashed var(--border);
+        border-radius: 8px;
+        background: var(--surface-2);
+        padding: 20px;
+        text-align: center;
+        transition: border-color 0.15s ease, background 0.15s ease;
+        cursor: pointer;
+    }
+
+    .file-drop:hover { border-color: var(--accent); background: var(--accent-soft); }
+    .file-drop.has-file { border-color: var(--success); background: var(--success-bg); }
+
+    .file-drop input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+
+    .file-drop .file-label { font-size: 13px; color: var(--text-muted); font-weight: 500; }
+    .file-drop.has-file .file-label { color: var(--success); }
+
+    button[type="submit"] {
+        width: 100%;
+        padding: 15px;
+        background: var(--accent);
+        color: #06121c;
+        border: none;
+        border-radius: 10px;
+        font-family: inherit;
+        font-weight: 700;
+        font-size: 15px;
+        cursor: pointer;
+        transition: background 0.15s ease, transform 0.1s ease;
+    }
+
+    button[type="submit"]:hover:not(:disabled) { background: var(--accent-hover); }
+    button[type="submit"]:active:not(:disabled) { transform: scale(0.99); }
+    button[type="submit"]:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .secondary-btn {
+        width: 100%;
+        padding: 12px;
+        margin-top: 14px;
+        background: var(--surface-2);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        font-family: inherit;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        transition: border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .secondary-btn:hover:not(:disabled) { border-color: var(--accent); background: var(--accent-soft); }
+    .secondary-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    #status {
+        display: none;
+        margin-top: 18px;
+        padding: 14px 16px;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 500;
+        align-items: center;
+        gap: 10px;
+    }
+
+    #status.show { display: flex; }
+    #status.loading { background: var(--accent-soft); color: var(--accent); }
+    #status.success { background: var(--success-bg); color: var(--success); }
+    #status.error { background: var(--error-bg); color: var(--error); }
+
+    #status a { color: inherit; font-weight: 700; text-decoration: underline; }
+
+    #scriptAudioStatus, #videoAudioStatus {
+        display: none;
+        margin-top: 12px;
+        padding: 12px 14px;
+        border-radius: 10px;
+        font-size: 13px;
+        font-weight: 500;
+        align-items: center;
+        gap: 10px;
+    }
+
+    #scriptAudioStatus.show, #videoAudioStatus.show { display: flex; }
+    #scriptAudioStatus.loading, #videoAudioStatus.loading { background: var(--accent-soft); color: var(--accent); }
+    #scriptAudioStatus.success, #videoAudioStatus.success { background: var(--success-bg); color: var(--success); }
+    #scriptAudioStatus.error, #videoAudioStatus.error { background: var(--error-bg); color: var(--error); }
+    #scriptAudioStatus a, #videoAudioStatus a { color: inherit; font-weight: 700; text-decoration: underline; }
+
+    .spinner {
+        width: 16px;
+        height: 16px;
+        border: 2px solid currentColor;
+        border-right-color: transparent;
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+        flex-shrink: 0;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    footer { text-align: center; color: var(--text-muted); font-size: 12px; margin-top: 32px; }
+</style>
+</head>
+<body>
+
+    <header>
+        <span class="badge">AI Video Studio</span>
+        <h1>Script-to-Video Generator</h1>
+        <p>Turn a script into a narrated AI video, or bring your own footage and audio.</p>
+    </header>
+
+    <form id="videoForm">
+
+        <div class="card">
+            <div class="card-header">
+                <span class="step-number">1</span>
+                <h2>Generate video from script</h2>
+            </div>
+            <div class="field">
+                <label for="script">Script</label>
+                <textarea id="script" name="script" placeholder="Paste your full script here... (leave empty if uploading your own video below)"></textarea>
+            </div>
+            <div class="field">
+                <label class="toggle-row" for="include_voiceover">
+                    <span>Include AI voiceover</span>
+                    <input type="checkbox" id="include_voiceover" name="include_voiceover" checked>
+                </label>
+                <p class="hint" style="margin-top:6px;">Turn off for a silent video (images only, e.g. to add your own music/audio in Step 3).</p>
+            </div>
+            <div class="field" id="voiceSelectField">
+                <label for="voice">Voiceover voice</label>
+                <select id="voice" name="voice">
+                    {% for key, value in voices.items() %}
+                        <option value="{{ key }}">{{ key.replace('_', ' ').title() }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="field">
+                <label for="pexels_key">Pexels API key</label>
+                <input type="text" id="pexels_key" name="pexels_key" placeholder="Required for scene images — free key at pexels.com/api">
+            </div>
+            <button type="button" id="audioFromScriptBtn" class="secondary-btn">Generate Audio from Script</button>
+            <div id="scriptAudioStatus"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <span class="step-number">2</span>
+                <h2>Or upload your own video</h2>
+                <span class="optional-tag">Optional</span>
+            </div>
+            <p class="hint">If you upload a video, the script above is ignored and no AI video is generated.</p>
+            <div class="field">
+                <div class="file-drop" id="videoDrop">
+                    <input type="file" id="video_file" name="video_file" accept="video/*">
+                    <div class="file-label" id="videoLabel">Click or drop a video file here</div>
+                </div>
+            </div>
+            <button type="button" id="audioFromVideoBtn" class="secondary-btn">Extract Audio from Video</button>
+            <div id="videoAudioStatus"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-header">
+                <span class="step-number">3</span>
+                <h2>Add your own audio</h2>
+                <span class="optional-tag">Optional</span>
+            </div>
+            <p class="hint">Works with either option above. Replaces the video's current audio track.</p>
+            <div class="field">
+                <div class="file-drop" id="audioDrop">
+                    <input type="file" id="audio_file" name="audio_file" accept="audio/*">
+                    <div class="file-label" id="audioLabel">Click or drop an audio file here</div>
+                </div>
+            </div>
+        </div>
+
+        <button type="submit" id="submitBtn">Generate Video</button>
+        <div id="status"></div>
+    </form>
+
+    <footer>Built with Flask, edge-tts / gTTS, Pexels, and MoviePy</footer>
+
+    <script>
+        const form = document.getElementById('videoForm');
+        const statusDiv = document.getElementById('status');
+        const submitBtn = document.getElementById('submitBtn');
+
+        function wireFileDrop(inputId, dropId, labelId) {
+            const input = document.getElementById(inputId);
+            const drop = document.getElementById(dropId);
+            const label = document.getElementById(labelId);
+            input.addEventListener('change', () => {
+                if (input.files.length > 0) {
+                    label.textContent = input.files[0].name;
+                    drop.classList.add('has-file');
+                } else {
+                    drop.classList.remove('has-file');
+                }
+            });
+        }
+        wireFileDrop('video_file', 'videoDrop', 'videoLabel');
+        wireFileDrop('audio_file', 'audioDrop', 'audioLabel');
+
+        const voiceToggle = document.getElementById('include_voiceover');
+        const voiceField = document.getElementById('voiceSelectField');
+        function syncVoiceField() {
+            voiceField.style.display = voiceToggle.checked ? 'block' : 'none';
+        }
+        voiceToggle.addEventListener('change', syncVoiceField);
+        syncVoiceField();
+
+        // Safe fetch helper: prevents the "Unexpected token '<'" crash.
+        // That crash happens when the server returns an HTML error page
+        // instead of JSON - usually because the Flask server is still
+        // running an OLDER version of app.py. This shows a clear
+        // message instead of crashing.
+        async function safeFetchJson(url, formData) {
+            const response = await fetch(url, { method: 'POST', body: formData });
+            const contentType = response.headers.get('content-type') || '';
+
+            if (!contentType.includes('application/json')) {
+                const rawText = await response.text();
+                throw new Error(
+                    'Server did not return JSON (got a ' + response.status + ' page instead). ' +
+                    'Make sure app.py was saved and the Flask server was restarted. ' +
+                    'Raw response starts with: ' + rawText.slice(0, 120)
+                );
+            }
+
+            return response.json();
+        }
+
+        function setMiniStatus(box, type, html, spinner) {
+            box.className = 'show ' + type;
+            box.innerHTML = (spinner ? '<div class="spinner"></div>' : '') + '<span>' + html + '</span>';
+        }
+
+        // --- Standalone: Generate Audio from Script ---
+        const audioFromScriptBtn = document.getElementById('audioFromScriptBtn');
+        const scriptAudioStatus = document.getElementById('scriptAudioStatus');
+
+        audioFromScriptBtn.addEventListener('click', async () => {
+            const scriptText = document.getElementById('script').value.trim();
+            if (!scriptText) {
+                setMiniStatus(scriptAudioStatus, 'error', 'Please type or paste a script first.', false);
+                return;
+            }
+
+            audioFromScriptBtn.disabled = true;
+            setMiniStatus(scriptAudioStatus, 'loading', 'Generating audio from your script...', true);
+
+            const formData = new FormData();
+            formData.append('script', scriptText);
+            formData.append('voice', document.getElementById('voice').value);
+
+            try {
+                const data = await safeFetchJson('/generate_audio_from_script', formData);
+
+                if (data.success) {
+                    setMiniStatus(scriptAudioStatus, 'success', 'Audio ready! <a href="' + data.audio_url + '">Download audio</a>', false);
+                } else {
+                    setMiniStatus(scriptAudioStatus, 'error', 'Error: ' + data.error, false);
+                }
+            } catch (err) {
+                setMiniStatus(scriptAudioStatus, 'error', 'Error: ' + err.message, false);
+            } finally {
+                audioFromScriptBtn.disabled = false;
+            }
+        });
+
+        // --- Standalone: Extract Audio from Video ---
+        const audioFromVideoBtn = document.getElementById('audioFromVideoBtn');
+        const videoAudioStatus = document.getElementById('videoAudioStatus');
+
+        audioFromVideoBtn.addEventListener('click', async () => {
+            const videoInput = document.getElementById('video_file');
+            if (!videoInput.files.length) {
+                setMiniStatus(videoAudioStatus, 'error', 'Please choose a video file first.', false);
+                return;
+            }
+
+            audioFromVideoBtn.disabled = true;
+            setMiniStatus(videoAudioStatus, 'loading', 'Extracting audio from your video...', true);
+
+            const formData = new FormData();
+            formData.append('video_file', videoInput.files[0]);
+
+            try {
+                const data = await safeFetchJson('/extract_audio_from_video', formData);
+
+                if (data.success) {
+                    setMiniStatus(videoAudioStatus, 'success', 'Audio extracted! <a href="' + data.audio_url + '">Download audio</a>', false);
+                } else {
+                    setMiniStatus(videoAudioStatus, 'error', 'Error: ' + data.error, false);
+                }
+            } catch (err) {
+                setMiniStatus(videoAudioStatus, 'error', 'Error: ' + err.message, false);
+            } finally {
+                audioFromVideoBtn.disabled = false;
+            }
+        });
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            submitBtn.disabled = true;
+            setStatus('loading', 'Processing your video... this can take a few minutes', true);
+
+            const formData = new FormData(form);
+
+            try {
+                const data = await safeFetchJson('/generate', formData);
+
+                if (data.success) {
+                    let html = 'Video is ready! <a href="' + data.video_url + '">Download video</a>';
+                    if (data.voiceover_audio_url) {
+                        html += ' &nbsp;|&nbsp; <a href="' + data.voiceover_audio_url + '">Download voice note (audio only)</a>';
+                    }
+                    if (data.extracted_audio_url) {
+                        html += ' &nbsp;|&nbsp; <a href="' + data.extracted_audio_url + '">Download extracted audio from your video</a>';
+                    }
+                    setStatus('success', html, false);
+                } else {
+                    setStatus('error', 'Error: ' + data.error, false);
+                }
+            } catch (err) {
+                setStatus('error', 'Error: ' + err.message, false);
+            } finally {
+                submitBtn.disabled = false;
+            }
+        });
+
+        function setStatus(type, html, spinner) {
+            statusDiv.className = 'show ' + type;
+            statusDiv.innerHTML = (spinner ? '<div class="spinner"></div>' : '') + '<span>' + html + '</span>';
+        }
+    </script>
+</body>
+</html>
